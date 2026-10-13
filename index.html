@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Agenda Salão</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#121212">
+  
+  <!-- Configurações específicas para iOS/Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Agenda Salão">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <style>
+    /* Estilos base e Suporte às Áreas Seguras do iPhone (Notch e Barra) */
+    :root {
+      --bg-color: #121212;
+      --card-bg: #1e1e1e;
+      --text-color: #f1f1f1;
+      --accent: #d946ef;
+      --accent-hover: #c026d3;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --border-radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: calc(env(safe-area-inset-bottom) + 70px);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--card-bg);
+      padding: 16px;
+      text-align: center;
+      border-bottom: 1px solid #333;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .container { padding: 16px; max-width: 600px; margin: 0 auto; }
+    
+    /* Botões grandes para facilitar uso com uma mão */
+    .btn {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: var(--border-radius);
+      font-size: 16px;
+      font-weight: bold;
+      width: 100%;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .btn-secondary { background-color: #333; color: white; }
+    .btn-danger { background-color: var(--danger); }
+    .btn-wa { background-color: #25D366; color: white; }
+
+    /* Cards e Listas */
+    .card {
+      background-color: var(--card-bg);
+      padding: 16px;
+      border-radius: var(--border-radius);
+      margin-bottom: 12px;
+      border: 1px solid #2a2a2a;
+    }
+
+    .navegacao-data {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .navegacao-data button { width: auto; padding: 10px 16px; }
+
+    /* Inputs legíveis */
+    input, select, textarea {
+      width: 100%;
+      padding: 14px;
+      margin: 8px 0 16px 0;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      color: white;
+      border-radius: var(--border-radius);
+      font-size: 16px;
+    }
+
+    /* Modal estilo Bottom Sheet no iPhone */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 100;
+      align-items: flex-end;
+    }
+    .modal-content {
+      background: var(--card-bg);
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 20px;
+      padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+    }
+
+    /* Navegação Inferior Fixa */
+    nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--card-bg);
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0 calc(env(safe-area-inset-bottom) + 10px) 0;
+      border-top: 1px solid #333;
+    }
+    nav button { background: none; border: none; color: #888; font-size: 12px; }
+    nav button.active { color: var(--accent); font-weight: bold; }
+
+    .status-tag {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status-agendado { background: #3b82f6; }
+    .status-confirmado { background: var(--warning); }
+    .status-concluido { background: var(--success); }
+    .status-faltou { background: var(--danger); }
+    .status-cancelado { background: #6b7280; }
+    .alerta-conflito { color: var(--danger); font-size: 12px; font-weight: bold; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2 id="titulo-topo">Agenda Salão</h2>
+  </header>
+
+  <div class="container">
+    
+    <!-- Aviso sobre Backup -->
+    <div class="card" style="border-left: 4px solid var(--warning); padding: 10px;">
+      <small>⚠️ Lembre-se de fazer backup mensal dos seus dados na aba Configurações.</small>
+    </div>
+
+    <!-- Seção da Agenda -->
+    <div id="aba-agenda">
+      <div class="navegacao-data card">
+        <button class="btn btn-secondary" onclick="mudarData(-1)">❮</button>
+        <span id="data-atual-txt" style="font-weight: bold;"></span>
+        <button class="btn btn-secondary" onclick="mudarData(1)">❯</button>
+      </div>
+
+      <button class="btn" style="margin-bottom: 16px;" onclick="abrirModalAtendimento()">+ Novo Agendamento</button>
+
+      <!-- Totais Financeiros do Dia/Mês -->
+      <div class="card" style="display: flex; justify-content: space-between;">
+        <div><strong>Total Dia:</strong> R$ <span id="total-dia">0,00</span></div>
+        <div><strong>Total Mês:</strong> R$ <span id="total-mes">0,00</span></div>
+      </div>
+
+      <div id="lista-atendimentos"></div>
+    </div>
+
+    <!-- Seção de Clientes -->
+    <div id="aba-clientes" style="display: none;">
+      <input type="text" id="busca-cliente" placeholder="Buscar cliente por nome..." oninput="filtrarClientes()">
+      <div id="lista-clientes"></div>
+    </div>
+
+    <!-- Seção de Configurações / Backup -->
+    <div id="aba-config" style="display: none;">
+      <div class="card">
+        <h3>Backup dos Dados</h3>
+        <p style="margin: 8px 0; font-size: 14px; color: #aaa;">Baixe seus dados para não perder as informações do salão.</p>
+        <button class="btn" onclick="exportarDados()" style="margin-bottom: 8px;">Exportar Backup (JSON)</button>
+        <input type="file" id="import-file" style="display: none;" onchange="importarDados(event)">
+        <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">Importar Backup</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal para Novo / Editar Atendimento -->
+  <div id="modal-atendimento" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-titulo">Novo Atendimento</h3>
+      <form id="form-atendimento" onsubmit="salvarAtendimento(event)">
+        <input type="hidden" id="atendimento-id">
+        
+        <label>Nome da Cliente</label>
+        <input type="text" id="input-cliente" list="sugestoes-clientes" required placeholder="Digite o nome..." oninput="autopreencherCliente()">
+        <datalist id="sugestoes-clientes"></datalist>
+
+        <label>Telefone (DDD + Número)</label>
+        <input type="tel" id="input-telefone" placeholder="11999998888" required>
+
+        <label>Data</label>
+        <input type="date" id="input-data" required>
+
+        <div style="display: flex; gap: 8px;">
+          <div style="flex: 1;">
+            <label>Horário</label>
+            <input type="time" id="input-horario" required onchange="checarConflitos()">
+          </div>
+          <div style="flex: 1;">
+            <label>Duração (min)</label>
+            <input type="number" id="input-duracao" value="60" required onchange="checarConflitos()">
+          </div>
+        </div>
+        <div id="msg-conflito" class="alerta-conflito"></div>
+
+        <label>Serviço</label>
+        <input type="text" id="input-servico" placeholder="Ex: Corte e Escova" required>
+
+        <div style="display: flex; gap: 8px;">
+          <div style="flex: 1;">
+            <label>Valor (R$)</label>
+            <input type="number" step="0.01" id="input-valor" placeholder="0.00" required>
+          </div>
+          <div style="flex: 1;">
+            <label>Pagamento</label>
+            <select id="input-pago">
+              <option value="false">Pendente</option>
+              <option value="true">Pago</option>
+            </select>
+          </div>
+        </div>
+
+        <label>Status</label>
+        <select id="input-status">
+          <option value="agendado">Agendado</option>
+          <option value="confirmado">Confirmado</option>
+          <option value="concluido">Concluído</option>
+          <option value="faltou">Faltou</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+
+        <label>Fórmula / Observações Técnica</label>
+        <textarea id="input-formula" rows="3" placeholder="Ex: 50g 6.0 + 75ml OX 20vol"></textarea>
+
+        <button type="submit" class="btn" style="margin-top: 10px;">Salvar</button>
+        <button type="button" class="btn btn-secondary" onclick="fecharModal()" style="margin-top: 8px;">Cancelar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Navegação Inferior -->
+  <nav>
+    <button id="nav-agenda" class="active" onclick="trocarAba('agenda')">📅<br>Agenda</button>
+    <button id="nav-clientes" onclick="trocarAba('clientes')">💇‍♀️<br>Clientes</button>
+    <button id="nav-config" onclick="trocarAba('config')">⚙️<br>Config</button>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>
